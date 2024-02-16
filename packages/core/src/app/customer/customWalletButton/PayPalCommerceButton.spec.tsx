@@ -2,9 +2,10 @@ import { mount } from 'enzyme';
 import { noop } from 'lodash';
 import React, { FunctionComponent } from 'react';
 
+import { createLocaleContext, LocaleContext, LocaleContextType } from '@bigcommerce/checkout/locale';
+
 import { navigateToOrderConfirmation } from '../../checkout';
 import { getStoreConfig } from '../../config/config.mock';
-import { createLocaleContext, LocaleContext, LocaleContextType } from '../../locale';
 import CheckoutButton from '../CheckoutButton';
 
 import PayPalCommerceButton from './PayPalCommerceButton';
@@ -25,6 +26,7 @@ describe('PayPalCommerceButton', () => {
                     initialize={initialize}
                     methodId="paypalcommerce"
                     onError={error}
+                    onClick={jest.fn()}
                 />
             </LocaleContext.Provider>
         );
@@ -43,8 +45,9 @@ describe('PayPalCommerceButton', () => {
             methodId: 'paypalcommerce',
             paypalcommerce: {
                 container: 'paypalcommerceId',
-                onError: error,
                 onComplete: navigateToOrderConfirmation,
+                onClick: expect.any(Function),
+                onError: error,
             },
         });
     });

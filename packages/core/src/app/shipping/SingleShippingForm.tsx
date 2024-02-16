@@ -12,9 +12,12 @@ import {
     ShippingRequestOptions,
 } from '@bigcommerce/checkout-sdk';
 import { FormikProps, withFormik } from 'formik';
-import { debounce, noop } from 'lodash';
+import { debounce, isEqual, noop } from 'lodash';
 import React, { PureComponent, ReactNode } from 'react';
 import { lazy, object } from 'yup';
+
+import { withLanguage, WithLanguageProps } from '@bigcommerce/checkout/locale';
+import { FormContext } from '@bigcommerce/checkout/ui';
 
 import {
     AddressFormValues,
@@ -25,8 +28,8 @@ import {
     mapAddressToFormValues,
 } from '../address';
 import { getCustomFormFieldsValidationSchema } from '../formFields';
-import { withLanguage, WithLanguageProps } from '../locale';
-import { Fieldset, Form, FormContext } from '../ui/form';
+import { PaymentMethodId } from '../payment/paymentMethod';
+import { Fieldset, Form } from '../ui/form';
 
 import BillingSameAsShippingField from './BillingSameAsShippingField';
 import hasSelectedShippingOptions from './hasSelectedShippingOptions';
@@ -50,7 +53,7 @@ export interface SingleShippingFormProps {
     shippingAddress?: Address;
     shouldShowSaveAddress?: boolean;
     shouldShowOrderComments: boolean;
-    useFloatingLabel?: boolean;
+    isFloatingLabelEnabled?: boolean;
     deinitialize(options: ShippingRequestOptions): Promise<CheckoutSelectors>;
     deleteConsignments(): Promise<Address | undefined>;
     getFields(countryCode?: string): FormField[];
@@ -75,6 +78,15 @@ interface SingleShippingFormState {
     isResettingAddress: boolean;
     isUpdatingShippingData: boolean;
     hasRequestedShippingOptions: boolean;
+}
+
+function shouldHaveCustomValidation(methodId?: string): boolean {
+    const methodIdsWithoutCustomValidation: string[] = [
+        PaymentMethodId.BraintreeAcceleratedCheckout,
+        PaymentMethodId.PayPalCommerceAcceleratedCheckout
+    ];
+
+    return Boolean(methodId && !methodIdsWithoutCustomValidation.includes(methodId));
 }
 
 export const SHIPPING_AUTOSAVE_DELAY = 1700;
@@ -140,7 +152,7 @@ class SingleShippingForm extends PureComponent<
             deinitialize,
             values: { shippingAddress: addressForm },
             isShippingStepPending,
-            useFloatingLabel,
+            isFloatingLabelEnabled,
         } = this.props;
 
         const { isResettingAddress, isUpdatingShippingData, hasRequestedShippingOptions } =
@@ -164,6 +176,7 @@ class SingleShippingForm extends PureComponent<
                         googleMapsApiKey={googleMapsApiKey}
                         hasRequestedShippingOptions={hasRequestedShippingOptions}
                         initialize={initialize}
+                        isFloatingLabelEnabled={isFloatingLabelEnabled}
                         isLoading={isResettingAddress}
                         isShippingStepPending={isShippingStepPending}
                         methodId={methodId}
@@ -173,7 +186,6 @@ class SingleShippingForm extends PureComponent<
                         onUseNewAddress={this.onUseNewAddress}
                         shippingAddress={shippingAddress}
                         shouldShowSaveAddress={shouldShowSaveAddress}
-                        useFloatingLabel={useFloatingLabel}
                     />
                     {shouldShowBillingSameAsShipping && (
                         <div className="form-body">
@@ -237,6 +249,13 @@ class SingleShippingForm extends PureComponent<
         } = this.props;
 
         const updatedShippingAddress = addressForm && mapAddressFromFormValues(addressForm);
+
+        if (Array.isArray(shippingAddress?.customFields)) {
+            includeShippingOptions = !isEqual(
+                shippingAddress?.customFields,
+                updatedShippingAddress?.customFields
+            ) || includeShippingOptions;
+        }
 
         if (!updatedShippingAddress || isEqualAddress(updatedShippingAddress, shippingAddress)) {
             return;
@@ -326,7 +345,7 @@ export default withLanguage(
             getFields,
             methodId,
         }: SingleShippingFormProps & WithLanguageProps) =>
-            methodId
+            shouldHaveCustomValidation(methodId)
                 ? object({
                     shippingAddress: lazy<Partial<AddressFormValues>>((formValues) =>
                         getCustomFormFieldsValidationSchema({

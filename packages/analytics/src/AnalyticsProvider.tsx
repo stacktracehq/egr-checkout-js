@@ -1,9 +1,13 @@
 import {
     BodlEventsPayload,
     BodlService,
+    BraintreeConnectTrackerService,
     CheckoutService,
     createBodlService,
+    createBraintreeConnectTracker,
+    createPayPalCommerceConnectTracker,
     createStepTracker,
+    PayPalCommerceConnectTrackerService,
     StepTracker,
 } from '@bigcommerce/checkout-sdk';
 import React, { ReactNode, useMemo } from 'react';
@@ -23,6 +27,21 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
     );
     const getBodlService = useMemo(
         () => createAnalyticsService<BodlService>(createBodlService, [checkoutService.subscribe]),
+        [checkoutService],
+    );
+    const getBraintreeConnectTracker = useMemo(
+        () =>
+            createAnalyticsService<BraintreeConnectTrackerService>(createBraintreeConnectTracker, [
+                checkoutService,
+            ]),
+        [checkoutService],
+    );
+    const getPayPalCommerceConnectTracker = useMemo(
+        () =>
+            createAnalyticsService<PayPalCommerceConnectTrackerService>(
+                createPayPalCommerceConnectTracker,
+                [checkoutService],
+            ),
         [checkoutService],
     );
 
@@ -59,14 +78,18 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
 
     const customerPaymentMethodExecuted = (payload: BodlEventsPayload) => {
         getBodlService().customerPaymentMethodExecuted(payload);
+        getBraintreeConnectTracker().customerPaymentMethodExecuted();
+        getPayPalCommerceConnectTracker().customerPaymentMethodExecuted();
     };
 
     const showShippingMethods = () => {
         getBodlService().showShippingMethods();
     };
 
-    const selectedPaymentMethod = (methodName?: string) => {
+    const selectedPaymentMethod = (methodName: string, methodId: string) => {
         getBodlService().selectedPaymentMethod(methodName);
+        getBraintreeConnectTracker().selectedPaymentMethod(methodId);
+        getPayPalCommerceConnectTracker().selectedPaymentMethod(methodId);
     };
 
     const clickPayButton = (payload: BodlEventsPayload) => {
@@ -79,10 +102,17 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
 
     const paymentComplete = () => {
         getBodlService().paymentComplete();
+        getBraintreeConnectTracker().paymentComplete();
+        getPayPalCommerceConnectTracker().paymentComplete();
     };
 
     const exitCheckout = () => {
         getBodlService().exitCheckout();
+    };
+
+    const walletButtonClick = (methodId: string) => {
+        getBraintreeConnectTracker().walletButtonClick(methodId);
+        getPayPalCommerceConnectTracker().walletButtonClick(methodId);
     };
 
     const analyticsTracker: AnalyticsEvents = {
@@ -100,6 +130,7 @@ const AnalyticsProvider = ({ checkoutService, children }: AnalyticsProviderProps
         paymentRejected,
         paymentComplete,
         exitCheckout,
+        walletButtonClick,
     };
 
     return (

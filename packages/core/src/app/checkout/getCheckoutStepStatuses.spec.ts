@@ -84,7 +84,6 @@ describe('getCheckoutStepStatuses()', () => {
                 jest.spyOn(state.data, 'getBillingAddress').mockReturnValue(getBillingAddress());
                 jest.spyOn(state.data, 'getCustomer').mockReturnValue({
                     ...getGuestCustomer(),
-                    isStripeLinkAuthenticated: false
                 });
                 jest.spyOn(service.getState().data, 'getConfig').mockReturnValue({
                     ...getStoreConfig(),
@@ -92,6 +91,10 @@ describe('getCheckoutStepStatuses()', () => {
                         ...getStoreConfig().checkoutSettings, providerWithCustomCheckout: PaymentMethodId.StripeUPE,
                     },
                 });
+                jest.spyOn(
+                    service.getState().data,
+                    'getPaymentProviderCustomer',
+                ).mockReturnValue({ authenticationState: true });
 
                 const steps = getCheckoutStepStatuses(state);
 
@@ -108,6 +111,7 @@ describe('getCheckoutStepStatuses()', () => {
                         ...getStoreConfig().checkoutSettings, providerWithCustomCheckout: PaymentMethodId.StripeUPE,
                     },
                 });
+                jest.spyOn(service.getState().data, 'getCart').mockReturnValue(getCart());
 
                 const steps = getCheckoutStepStatuses(state);
 
@@ -146,7 +150,6 @@ describe('getCheckoutStepStatuses()', () => {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             expect(find(steps, { type: CheckoutStepType.Customer })!.isComplete).toBe(true);
         });
-
 
         it('is marked as non-editable if email is provided by digital wallet', () => {
             jest.spyOn(state.data, 'getCheckout').mockReturnValue(getCheckoutWithPayments());

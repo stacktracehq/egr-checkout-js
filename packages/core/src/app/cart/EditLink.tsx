@@ -1,7 +1,7 @@
 import React, { FunctionComponent, memo } from 'react';
 import TagManager from 'react-gtm-module'
 
-import { TranslatedString } from '../locale';
+import { TranslatedString } from '@bigcommerce/checkout/locale';
 
 export interface EditLinkProps {
     className?: string;

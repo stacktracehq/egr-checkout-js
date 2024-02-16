@@ -9,19 +9,7 @@ import React, { FunctionComponent, PureComponent, ReactNode, useCallback } from 
 import { TranslatedString } from '@bigcommerce/checkout/locale';
 import { CreditCardIcon, DropdownTrigger } from '@bigcommerce/checkout/ui';
 
-function mapFromInstrumentCardType(type: string): string {
-    switch (type) {
-        case 'amex':
-        case 'american_express':
-            return 'american-express';
-
-        case 'diners':
-            return 'diners-club';
-
-        default:
-            return type;
-    }
-}
+import { mapFromInstrumentCardType } from '../mapFromInstrumentCardType';
 
 export interface InstrumentSelectProps extends FieldProps<string> {
     instruments: CardInstrument[];
@@ -67,23 +55,20 @@ const InstrumentMenuItem: FunctionComponent<InstrumentMenuItemProps> = ({
                 <CreditCardIcon cardType={cardType} />
 
                 <div className="instrumentSelect-card" data-test={`${testId ?? ''}-last4`}>
-                    {
-                        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                        cardInfo ? (
-                            <TranslatedString
-                                data={{
-                                    cardTitle: cardInfo.niceType ?? '',
-                                    endingIn: instrument.last4,
-                                }}
-                                id="payment.instrument_ending_in_text"
-                            />
-                        ) : (
-                            <TranslatedString
-                                data={{ endingIn: instrument.last4 }}
-                                id="payment.instrument_default_ending_in_text"
-                            />
-                        )
-                    }
+                    {cardInfo ? (
+                        <TranslatedString
+                            data={{
+                                cardTitle: cardInfo.niceType ?? '',
+                                endingIn: instrument.last4,
+                            }}
+                            id="payment.instrument_ending_in_text"
+                        />
+                    ) : (
+                        <TranslatedString
+                            data={{ endingIn: instrument.last4 }}
+                            id="payment.instrument_default_ending_in_text"
+                        />
+                    )}
                 </div>
 
                 {!shouldHideExpiryDate && (

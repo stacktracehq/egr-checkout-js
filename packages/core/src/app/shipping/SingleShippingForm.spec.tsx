@@ -1,9 +1,12 @@
+import { createCheckoutService } from '@bigcommerce/checkout-sdk';
 import { mount, ReactWrapper } from 'enzyme';
 import React from 'react';
 
+import { ExtensionProvider } from '@bigcommerce/checkout/checkout-extension';
+import { createLocaleContext, LocaleContext, LocaleContextType } from '@bigcommerce/checkout/locale';
+
 import { getAddressFormFields } from '../address/formField.mock';
 import { getStoreConfig } from '../config/config.mock';
-import { createLocaleContext, LocaleContext, LocaleContextType } from '../locale';
 
 import BillingSameAsShippingField from './BillingSameAsShippingField';
 import { getShippingAddress } from './shipping-addresses.mock';
@@ -13,6 +16,7 @@ import SingleShippingForm, {
 } from './SingleShippingForm';
 
 describe('SingleShippingForm', () => {
+    const checkoutService = createCheckoutService();
     const addressFormFields = getAddressFormFields().filter(({ custom }) => !custom);
     let localeContext: LocaleContextType;
     let component: ReactWrapper;
@@ -30,6 +34,7 @@ describe('SingleShippingForm', () => {
             shouldShowOrderComments: true,
             consignments: [],
             cartHasChanged: false,
+            isBillingSameAsShipping: false,
             isLoading: false,
             isShippingStepPending: false,
             onSubmit: jest.fn(),
@@ -44,7 +49,9 @@ describe('SingleShippingForm', () => {
 
         component = mount(
             <LocaleContext.Provider value={localeContext}>
-                <SingleShippingForm {...defaultProps} />
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm {...defaultProps} />
+                </ExtensionProvider>
             </LocaleContext.Provider>,
         );
     });
@@ -81,12 +88,14 @@ describe('SingleShippingForm', () => {
     it('calls updateAddress if modified field does not affect shipping but makes form valid', (done) => {
         component = mount(
             <LocaleContext.Provider value={localeContext}>
-                <SingleShippingForm
-                    {...defaultProps}
-                    getFields={() => [
-                        ...addressFormFields.map((field) => ({ ...field, required: true })),
-                    ]}
-                />
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm
+                        {...defaultProps}
+                        getFields={() => [
+                            ...addressFormFields.map((field) => ({ ...field, required: true })),
+                        ]}
+                    />
+                </ExtensionProvider>
             </LocaleContext.Provider>,
         );
 
@@ -115,6 +124,58 @@ describe('SingleShippingForm', () => {
                 {
                     ...getShippingAddress(),
                     address2: 'foo 1',
+                },
+                {
+                    params: {
+                        include: {
+                            'consignments.availableShippingOptions': true,
+                        },
+                    },
+                },
+            );
+
+            done();
+        }, SHIPPING_AUTOSAVE_DELAY * 1.1);
+    });
+
+    it('calls updateAddress including shipping options if custom form fields are updated', (done) => {
+        component = mount(
+            <LocaleContext.Provider value={localeContext}>
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm
+                        {...defaultProps}
+                        getFields={() => [
+                            ...addressFormFields,
+                            {
+                                custom: true,
+                                default: '',
+                                fieldType: 'text',
+                                id: 'field_25',
+                                label: 'Custom message',
+                                name: 'field_25',
+                                required: true,
+                                type: 'string',
+                            },
+                        ]}
+                    />
+                </ExtensionProvider>
+            </LocaleContext.Provider>,
+        );
+
+        component.find('input[name="shippingAddress.customFields.field_25"]').simulate('change', {
+            target: { value: 'foo', name: 'shippingAddress.customFields.field_25' },
+        });
+
+        setTimeout(() => {
+            expect(defaultProps.updateAddress).toHaveBeenCalledWith(
+                {
+                    ...getShippingAddress(),
+                    customFields: [
+                        {
+                            fieldId: 'field_25',
+                            fieldValue: 'foo',
+                        },
+                    ],
                 },
                 {
                     params: {
@@ -198,22 +259,24 @@ describe('SingleShippingForm', () => {
     it('calls update address for amazon pay if required custom fields are filled out', (done) => {
         component = mount(
             <LocaleContext.Provider value={localeContext}>
-                <SingleShippingForm
-                    {...defaultProps}
-                    getFields={() => [
-                        ...addressFormFields,
-                        {
-                            custom: true,
-                            default: '',
-                            fieldType: 'text',
-                            id: 'field_25',
-                            label: 'Custom message',
-                            name: 'field_25',
-                            required: true,
-                            type: 'string',
-                        },
-                    ]}
-                />
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm
+                        {...defaultProps}
+                        getFields={() => [
+                            ...addressFormFields,
+                            {
+                                custom: true,
+                                default: '',
+                                fieldType: 'text',
+                                id: 'field_25',
+                                label: 'Custom message',
+                                name: 'field_25',
+                                required: true,
+                                type: 'string',
+                            },
+                        ]}
+                    />
+                </ExtensionProvider>
             </LocaleContext.Provider>,
         );
 
@@ -248,22 +311,24 @@ describe('SingleShippingForm', () => {
     it('does not update address for amazon pay if required custom fields is left empty', (done) => {
         component = mount(
             <LocaleContext.Provider value={localeContext}>
-                <SingleShippingForm
-                    {...defaultProps}
-                    getFields={() => [
-                        ...addressFormFields,
-                        {
-                            custom: true,
-                            default: '',
-                            fieldType: 'text',
-                            id: 'field_25',
-                            label: 'Custom message',
-                            name: 'field_25',
-                            required: true,
-                            type: 'string',
-                        },
-                    ]}
-                />
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm
+                        {...defaultProps}
+                        getFields={() => [
+                            ...addressFormFields,
+                            {
+                                custom: true,
+                                default: '',
+                                fieldType: 'text',
+                                id: 'field_25',
+                                label: 'Custom message',
+                                name: 'field_25',
+                                required: true,
+                                type: 'string',
+                            },
+                        ]}
+                    />
+                </ExtensionProvider>
             </LocaleContext.Provider>,
         );
 
@@ -281,10 +346,76 @@ describe('SingleShippingForm', () => {
     it('does not render billing same as shipping checkbox for amazon pay', () => {
         component = mount(
             <LocaleContext.Provider value={localeContext}>
-                <SingleShippingForm {...defaultProps} methodId="amazonpay" />
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm {...defaultProps} methodId="amazonpay" />
+                </ExtensionProvider>
             </LocaleContext.Provider>,
         );
 
         expect(component.contains(<BillingSameAsShippingField />)).toBe(false);
     });
+
+    describe('validation works as expected by methodId', () => {
+        let component: ReactWrapper;
+
+        const WrapperShippingForm = (methodId: string) => (
+            mount(<LocaleContext.Provider value={localeContext}>
+                <ExtensionProvider checkoutService={checkoutService}>
+                    <SingleShippingForm
+                        {...defaultProps}
+                        getFields={() => [...getAddressFormFields()]}
+                        methodId={methodId}
+                    />
+                </ExtensionProvider>
+            </LocaleContext.Provider>)
+        );
+
+        it('braintreeacceleratedcheckout', async (done) => {
+            component = WrapperShippingForm('braintreeacceleratedcheckout');
+
+            component.find('input[name="shippingAddress.firstName"]').simulate('change', {
+                target: { value: '', name: 'shippingAddress.firstName' },
+            });
+
+            component.find('form').simulate('submit');
+
+            await new Promise((resolve) => process.nextTick(resolve));
+
+            component.update();
+
+            setTimeout(() => {
+                expect(defaultProps.updateAddress).not.toHaveBeenCalled();
+
+                expect(component.find('[data-test="shipping-address-first-name-field-error-message"]').text()).toBe(
+                    'First Name is required',
+                );
+
+                done();
+            }, SHIPPING_AUTOSAVE_DELAY * 1.1);
+        });
+
+        it('paypalcommerceacceleratedcheckout', async (done) => {
+            component = WrapperShippingForm('paypalcommerceacceleratedcheckout');
+
+            component.find('input[name="shippingAddress.firstName"]').simulate('change', {
+                target: { value: '', name: 'shippingAddress.firstName' },
+            });
+
+            component.find('form').simulate('submit');
+
+            await new Promise((resolve) => process.nextTick(resolve));
+
+            component.update();
+
+            setTimeout(() => {
+                expect(defaultProps.updateAddress).not.toHaveBeenCalled();
+
+                expect(component.find('[data-test="shipping-address-first-name-field-error-message"]').text()).toBe(
+                    'First Name is required',
+                );
+
+                done();
+            }, SHIPPING_AUTOSAVE_DELAY * 1.1);
+        });
+    })
 });

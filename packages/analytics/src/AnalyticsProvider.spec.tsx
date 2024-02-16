@@ -15,35 +15,37 @@ jest.mock('@bigcommerce/checkout-sdk', () => {
     };
 });
 
+type EventPropsItem = string | CheckoutSdk.BodlEventsPayload;
+
 const AnalyticsProviderChildrenMock = ({
     eventName,
-    eventPayload,
+    eventProps = [],
 }: {
     eventName: string;
-    eventPayload?: string | CheckoutSdk.BodlEventsPayload;
+    eventProps?: EventPropsItem[];
 }) => {
     const { analyticsTracker } = useAnalytics();
 
     useEffect(() => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        analyticsTracker[eventName](eventPayload);
-    }, [analyticsTracker, eventName, eventPayload]);
+        analyticsTracker[eventName](...eventProps);
+    }, [analyticsTracker, eventName, eventProps]);
 
     return null;
 };
 
 const TestComponent = ({
     eventName,
-    eventPayload,
+    eventProps,
 }: {
     eventName: string;
-    eventPayload?: string | CheckoutSdk.BodlEventsPayload;
+    eventProps?: EventPropsItem[];
 }) => {
     const checkoutService = CheckoutSdk.createCheckoutService();
 
     return (
         <AnalyticsProvider checkoutService={checkoutService}>
-            <AnalyticsProviderChildrenMock eventName={eventName} eventPayload={eventPayload} />
+            <AnalyticsProviderChildrenMock eventName={eventName} eventProps={eventProps} />
         </AnalyticsProvider>
     );
 };
@@ -51,11 +53,11 @@ const TestComponent = ({
 describe('AnalyticsProvider', () => {
     let stepTrackerMock: CheckoutSdk.StepTracker;
     let bodlServiceMock: CheckoutSdk.BodlService;
+    let braintreeConnectTracker: CheckoutSdk.BraintreeConnectTrackerService;
+    let paypalCommerceConnectTracker: CheckoutSdk.PayPalCommerceConnectTrackerService;
 
     beforeEach(() => {
-        jest.spyOn(createAnalyticsService, 'default').mockImplementation(
-            (createFn, _args) => createFn,
-        );
+        jest.spyOn(createAnalyticsService, 'default').mockImplementation((createFn) => createFn);
 
         stepTrackerMock = {
             trackOrderComplete: jest.fn(),
@@ -63,7 +65,7 @@ describe('AnalyticsProvider', () => {
             trackStepViewed: jest.fn(),
             trackStepCompleted: jest.fn(),
         };
-        jest.spyOn(CheckoutSdk, 'createStepTracker').mockImplementation((_args) => stepTrackerMock);
+        jest.spyOn(CheckoutSdk, 'createStepTracker').mockImplementation(() => stepTrackerMock);
 
         bodlServiceMock = {
             checkoutBegin: jest.fn(),
@@ -81,6 +83,27 @@ describe('AnalyticsProvider', () => {
             exitCheckout: jest.fn(),
         };
         jest.spyOn(CheckoutSdk, 'createBodlService').mockImplementation(() => bodlServiceMock);
+
+        braintreeConnectTracker = {
+            customerPaymentMethodExecuted: jest.fn(),
+            selectedPaymentMethod: jest.fn(),
+            paymentComplete: jest.fn(),
+            trackStepViewed: jest.fn(),
+            walletButtonClick: jest.fn(),
+        };
+        jest.spyOn(CheckoutSdk, 'createBraintreeConnectTracker').mockImplementation(
+            () => braintreeConnectTracker,
+        );
+
+        paypalCommerceConnectTracker = {
+            customerPaymentMethodExecuted: jest.fn(),
+            selectedPaymentMethod: jest.fn(),
+            paymentComplete: jest.fn(),
+            walletButtonClick: jest.fn(),
+        };
+        jest.spyOn(CheckoutSdk, 'createPayPalCommerceConnectTracker').mockImplementation(
+            () => paypalCommerceConnectTracker,
+        );
     });
 
     it('throws an error when useAnalytics hook used without AnalyticsContext', () => {
@@ -106,7 +129,7 @@ describe('AnalyticsProvider', () => {
     });
 
     it('track step completed', () => {
-        mount(<TestComponent eventName="trackStepCompleted" eventPayload="stepName" />);
+        mount(<TestComponent eventName="trackStepCompleted" eventProps={['stepName']} />);
 
         expect(stepTrackerMock.trackStepCompleted).toHaveBeenCalledTimes(1);
         expect(stepTrackerMock.trackStepCompleted).toHaveBeenCalledWith('stepName');
@@ -115,7 +138,7 @@ describe('AnalyticsProvider', () => {
     });
 
     it('track step viewed', () => {
-        mount(<TestComponent eventName="trackStepViewed" eventPayload="stepName" />);
+        mount(<TestComponent eventName="trackStepViewed" eventProps={['stepName']} />);
 
         expect(stepTrackerMock.trackStepViewed).toHaveBeenCalledTimes(1);
         expect(stepTrackerMock.trackStepViewed).toHaveBeenCalledWith('stepName');
@@ -129,7 +152,7 @@ describe('AnalyticsProvider', () => {
     });
 
     it('track customer email entry', () => {
-        mount(<TestComponent eventName="customerEmailEntry" eventPayload="email@test.com" />);
+        mount(<TestComponent eventName="customerEmailEntry" eventProps={['email@test.com']} />);
 
         expect(bodlServiceMock.customerEmailEntry).toHaveBeenCalledTimes(1);
         expect(bodlServiceMock.customerEmailEntry).toHaveBeenCalledWith('email@test.com');
@@ -139,7 +162,7 @@ describe('AnalyticsProvider', () => {
         mount(
             <TestComponent
                 eventName="customerSuggestionInit"
-                eventPayload={{ data: 'test data' }}
+                eventProps={[{ data: 'test data' }]}
             />,
         );
 
@@ -159,7 +182,7 @@ describe('AnalyticsProvider', () => {
         mount(
             <TestComponent
                 eventName="customerPaymentMethodExecuted"
-                eventPayload={{ data: 'test data' }}
+                eventProps={[{ data: 'test data' }]}
             />,
         );
 
@@ -167,6 +190,10 @@ describe('AnalyticsProvider', () => {
         expect(bodlServiceMock.customerPaymentMethodExecuted).toHaveBeenCalledWith({
             data: 'test data',
         });
+        expect(braintreeConnectTracker.customerPaymentMethodExecuted).toHaveBeenCalledTimes(1);
+        expect(braintreeConnectTracker.customerPaymentMethodExecuted).toHaveBeenCalled();
+        expect(paypalCommerceConnectTracker.customerPaymentMethodExecuted).toHaveBeenCalledTimes(1);
+        expect(paypalCommerceConnectTracker.customerPaymentMethodExecuted).toHaveBeenCalled();
     });
 
     it('track show shipping methods', () => {
@@ -176,14 +203,40 @@ describe('AnalyticsProvider', () => {
     });
 
     it('track selected payment method', () => {
-        mount(<TestComponent eventName="selectedPaymentMethod" eventPayload="Credit card" />);
+        mount(
+            <TestComponent
+                eventName="selectedPaymentMethod"
+                eventProps={['Credit card', 'paypalcreditcard']}
+            />,
+        );
 
         expect(bodlServiceMock.selectedPaymentMethod).toHaveBeenCalledTimes(1);
         expect(bodlServiceMock.selectedPaymentMethod).toHaveBeenCalledWith('Credit card');
+        expect(braintreeConnectTracker.selectedPaymentMethod).toHaveBeenCalledTimes(1);
+        expect(braintreeConnectTracker.selectedPaymentMethod).toHaveBeenCalledWith(
+            'paypalcreditcard',
+        );
+        expect(paypalCommerceConnectTracker.selectedPaymentMethod).toHaveBeenCalledTimes(1);
+        expect(paypalCommerceConnectTracker.selectedPaymentMethod).toHaveBeenCalledWith(
+            'paypalcreditcard',
+        );
+    });
+
+    it('track wallet button click', () => {
+        mount(<TestComponent eventName="walletButtonClick" eventProps={['paypalwalletbutton']} />);
+
+        expect(braintreeConnectTracker.walletButtonClick).toHaveBeenCalledTimes(1);
+        expect(braintreeConnectTracker.walletButtonClick).toHaveBeenCalledWith(
+            'paypalwalletbutton',
+        );
+        expect(paypalCommerceConnectTracker.walletButtonClick).toHaveBeenCalledTimes(1);
+        expect(paypalCommerceConnectTracker.walletButtonClick).toHaveBeenCalledWith(
+            'paypalwalletbutton',
+        );
     });
 
     it('track click Pay button', () => {
-        mount(<TestComponent eventName="clickPayButton" eventPayload={{ data: 'test data' }} />);
+        mount(<TestComponent eventName="clickPayButton" eventProps={[{ data: 'test data' }]} />);
 
         expect(bodlServiceMock.clickPayButton).toHaveBeenCalledTimes(1);
         expect(bodlServiceMock.clickPayButton).toHaveBeenCalledWith({ data: 'test data' });
