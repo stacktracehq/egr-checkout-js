@@ -31,7 +31,7 @@ import ShippingForm from './ShippingForm';
 import ShippingHeader from './ShippingHeader';
 import { SingleShippingFormValues } from './SingleShippingForm';
 import StripeShipping from './stripeUPE/StripeShipping';
-import { TranslatedString } from '../locale';
+import { TranslatedString } from '@bigcommerce/checkout/locale';
 import { UnassignItemError } from './errors';
 import { createSelector } from 'reselect';
 import fitmentCentres from '../../static/fitment-centres.json';
