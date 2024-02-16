@@ -37,7 +37,9 @@
     },
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/packages/core"],
+      "outputs": [
+        "coverage/packages/core"
+      ],
       "options": {
         "jestConfig": "packages/core/jest.config.js",
         "passWithNoTests": false,
@@ -52,10 +54,14 @@
     },
     "lint": {
       "executor": "@nrwl/linter:eslint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "fix": true,
       "options": {
-        "lintFilePatterns": ["packages/core/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/core/**/*.{ts,tsx}"
+        ]
       },
       "dependsOn": [
         {
@@ -74,5 +80,7 @@
       }
     }
   },
-  "tags": ["scope:core"]
+  "tags": [
+    "scope:core"
+  ]
 }

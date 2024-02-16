@@ -70,6 +70,7 @@ export interface SingleShippingFormProps {
 export interface SingleShippingFormValues {
     billingSameAsShipping: boolean;
     shippingAddress?: AddressFormValues;
+    authorityToLeave?: boolean;
     orderComment: string;
 }
 
@@ -346,21 +347,21 @@ export default withLanguage(
         }: SingleShippingFormProps & WithLanguageProps) =>
             shouldHaveCustomValidation(methodId)
                 ? object({
-                      shippingAddress: lazy<Partial<AddressFormValues>>((formValues) =>
-                          getCustomFormFieldsValidationSchema({
-                              translate: getTranslateAddressError(language),
-                              formFields: getFields(formValues && formValues.countryCode),
-                          }),
-                      ),
-                  })
+                    shippingAddress: lazy<Partial<AddressFormValues>>((formValues) =>
+                        getCustomFormFieldsValidationSchema({
+                            translate: getTranslateAddressError(language),
+                            formFields: getFields(formValues && formValues.countryCode),
+                        }),
+                    ),
+                })
                 : object({
-                      shippingAddress: lazy<Partial<AddressFormValues>>((formValues) =>
-                          getAddressFormFieldsValidationSchema({
-                              language,
-                              formFields: getFields(formValues && formValues.countryCode),
-                          }),
-                      ),
-                  }),
+                    shippingAddress: lazy<Partial<AddressFormValues>>((formValues) =>
+                        getAddressFormFieldsValidationSchema({
+                            language,
+                            formFields: getFields(formValues && formValues.countryCode),
+                        }),
+                    ),
+                }),
         enableReinitialize: false,
     })(SingleShippingForm),
 );
